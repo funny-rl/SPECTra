@@ -1,0 +1,75 @@
+main_model:
+  # use epsilon greedy action selector
+  action_selector: "epsilon_greedy"
+  epsilon_start: 1.0
+  epsilon_finish: 0.05
+  epsilon_anneal_time: 100000 # 500000 for 6h_vs_8z
+
+  runner: "episode"
+  batch_size_run: 8
+  buffer_size: 5000
+  batch_size: 32
+
+  # update the target network every {} episodes
+  target_update_interval: 200
+
+  # use the Q_Learner to train
+  mac: "ss_mac"
+  #agent: "hpn_rnn"
+  agent: "ss_rnn"
+
+  hidden_size: 64
+  n_head: 4
+  agent_output_type: q
+
+  learner: "nq_learner"
+  mixer: "vdn"
+
+  lr: 0.001 # Learning rate for agents
+  td_lambda: 0.6
+  optimizer: 'adam'
+  q_lambda: False
+
+  name: "mast_vdn"
+
+  obs_agent_id: False # Include the agent's one_hot id in the observation
+  obs_last_action: False # Include the agent's last action (one_hot) in the observation
+
+sub_model:
+  # use epsilon greedy action selector
+  action_selector: "epsilon_greedy"
+  epsilon_start: 1.0
+  epsilon_finish: 0.05
+  epsilon_anneal_time: 100000 # 500000 for 6h_vs_8z
+
+  runner: "episode"
+  batch_size_run: 8
+  buffer_size: 5000
+  batch_size: 8
+
+  # update the target network every {} episodes
+  target_update_interval: 200
+
+  # use the Q_Learner to train
+  mac: "updet_mac"
+  agent: "updet_agent"
+
+  agent_output_type: q
+  # %%%%%%%%%%%%% Transformer Settings %%%%%%%%%%%
+  transformer_embed_dim: 32
+  transformer_heads: 3  # head number of transformer
+  transformer_depth: 2  # block number of transformer
+
+  learner: "nq_learner"
+  mixer: "vdn"
+  mixing_embed_dim: 32
+  hypernet_embed: 64
+  lr: 0.001 # Learning rate for agents
+  td_lambda: 0.6
+  optimizer: 'adam'
+  q_lambda: False
+
+  name: "updet_vdn"
+
+
+name: attention_map
