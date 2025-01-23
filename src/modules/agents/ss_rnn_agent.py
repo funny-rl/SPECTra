@@ -7,6 +7,7 @@ class SS_RNNAgent(nn.Module):
     def __init__(self, input_shape, args):
         super(SS_RNNAgent, self).__init__()
         self.args = args
+        self.use_O2MA = self.args.use_O2MA
         self.n_actions = self.args.n_actions
         self.n_head = self.args.n_head
         self.hidden_size = self.args.hidden_size
@@ -16,17 +17,29 @@ class SS_RNNAgent(nn.Module):
         self.own_feats_dim, self.enemy_feats_dim, self.ally_feats_dim = input_shape
         self.enemy_feats_dim = self.enemy_feats_dim[-1]
         self.ally_feats_dim = self.ally_feats_dim[-1]
-
+        
+        if self.args.obs_agent_id:
+            self.own_feats_dim += 1
+        if self.args.obs_last_action:
+            self.own_feats_dim += 1 
+            
         self.own_embedding = nn.Linear(self.own_feats_dim, self.hidden_size)
         self.allies_embedding = nn.Linear(self.ally_feats_dim, self.hidden_size) 
         self.enemies_embedding = nn.Linear(self.enemy_feats_dim, self.hidden_size)
         
         self.normal_actions_net = nn.Linear(self.hidden_size, self.output_normal_actions)
         
-        self.entity_attention = CrossAttentionBlock(
-            d = self.hidden_size, 
-            h = self.n_head
-        )
+        # Decide whether to use SQCA or self-attention
+        if self.use_O2MA:
+            self.entity_attention = CrossAttentionBlock(
+                d = self.hidden_size, 
+                h = self.n_head
+            )
+        else:
+            self.entity_attention = SetAttentionBlock(
+                d = self.hidden_size, 
+                h = self.n_head
+            )
         
         self.rnn = nn.GRUCell(self.hidden_size, self.hidden_size)
         
@@ -52,22 +65,34 @@ class SS_RNNAgent(nn.Module):
             batch x num_agents x hidden_size    
         """
         
-        bs, own_feats, ally_feats, enemy_feats  = inputs
+        bs, own_feats, ally_feats, enemy_feats, embedding_indices  = inputs
         
         self.n_agents = ally_feats.shape[1] + 1
         
         own_masks = ~th.all(own_feats == 0, dim=-1)
         ally_mask = ~th.all(ally_feats == 0, dim=-1)
         enemy_mask = ~th.all(enemy_feats == 0, dim=-1)
+        
+        if self.args.obs_agent_id:
+            agent_indices = embedding_indices[0].reshape(-1, 1, 1)
+            own_feats = th.cat((own_feats, agent_indices), dim=-1)
+        if self.args.obs_last_action:
+            last_action_indices = embedding_indices[-1].reshape(-1, 1, 1)
+            own_feats = th.cat((own_feats, last_action_indices), dim=-1)
 
         masks = th.cat((own_masks, ally_mask, enemy_mask), dim=-1).unsqueeze(1)
-  
         own_feats = self.own_embedding(own_feats)
         ally_feats = self.allies_embedding(ally_feats)
         enemy_feats = self.enemies_embedding(enemy_feats)
         
         embeddings = th.cat((own_feats, ally_feats, enemy_feats), dim=1) # (bs * n_agents, n_entities, hidden_size)
-        action_query = self.entity_attention(embeddings[:, 0].unsqueeze(1), embeddings, masks) # (bs * n_agents, 1, hidden_size)
+        
+        if self.use_O2MA:
+            action_query = self.entity_attention(embeddings[:, 0].unsqueeze(1), embeddings, masks) # (bs * n_agents, 1, hidden_size)
+        else:
+            action_query = self.entity_attention(embeddings, masks.repeat(1, self.n_entities, 1))
+            action_query = action_query.mean(dim = 1, keepdim = True)
+        
         
         action_query = action_query.reshape(-1, self.hidden_size) # (bs * n_agents, hidden_size)
     
@@ -83,7 +108,6 @@ class SS_RNNAgent(nn.Module):
     
         if self.use_extended_action_masking:
             action_key = embeddings
-            
         elif "sc2" in self.args.env:
             action_key = embeddings[:, self.n_agents:]
             

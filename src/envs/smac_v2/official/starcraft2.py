@@ -620,7 +620,6 @@ class StarCraft2Env(MultiAgentEnv):
         actions_int = [int(a) for a in actions]
 
         self.last_action = np.eye(self.n_actions)[np.array(actions_int)]
-
         # Collect individual actions
         sc_actions = []
         if self.debug:
@@ -1731,7 +1730,6 @@ class StarCraft2Env(MultiAgentEnv):
         during decentralised execution.
         """
         agents = list(range(self.n_agents))
-        random.shuffle(agents)
         agents_obs = [None for i in range(len(agents))]
         for agent in agents:
             agents_obs[agent] = self.get_obs_agent(

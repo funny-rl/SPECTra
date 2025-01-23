@@ -50,7 +50,6 @@ class HPNMAC(BasicMAC):
                 embedding_indices.append(None)
             else:
                 embedding_indices.append(batch["actions"][:, t - 1].squeeze(-1))
-
         return bs, own_context, enemy_feats_t, ally_feats_t, embedding_indices
 
     def _get_input_shape(self, scheme):

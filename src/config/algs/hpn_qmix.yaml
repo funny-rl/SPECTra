@@ -9,7 +9,7 @@ epsilon_anneal_time: 100000 # 500000 for 6h_vs_8z
 runner: "parallel"
 batch_size_run: 8 # batch_size_run=4, buffer_size = 2500, batch_size=64  for 3s5z_vs_3s6z
 buffer_size: 5000 
-batch_size: 32
+batch_size: 128
 
 # update the target network every {} episodes
 target_update_interval: 200
@@ -41,5 +41,5 @@ obs_agent_id: True # Include the agent's one_hot id in the observation
 obs_last_action: False # Include the agent's last action (one_hot) in the observation
 
 
-# for compatibility with SS-Net
+# for compatibility with SS-HyperNet
 mixing_n_head: 1

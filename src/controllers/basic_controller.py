@@ -118,7 +118,7 @@ class BasicMAC:
                 attention_score = tblock.attention.attention_score
                 attention_scores.append(attention_score)
             
-        if self.args.name == "mast_vdn":
+        if self.args.name == "ss_vdn":
             attention_scores = self.agent.entity_attention.mab.multihead.attention.attention_score
 
         return attention_scores

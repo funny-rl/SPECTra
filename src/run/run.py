@@ -273,7 +273,7 @@ def run_sequential(args, logger):
     last_time = start_time
 
     logger.console_logger.info("Beginning training for {} timesteps".format(args.t_max))
-
+              
     while runner.t_env <= args.t_max:
         if use_CL:
             args, upgrade = CL_manager.update(args, runner.t_env)
@@ -303,7 +303,7 @@ def run_sequential(args, logger):
 
             if episode_sample.device != args.device:
                 episode_sample.to(args.device)
-
+            
             learner.train(episode_sample, runner.t_env, episode)
             del episode_sample
 

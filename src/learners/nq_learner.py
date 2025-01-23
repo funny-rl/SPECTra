@@ -13,7 +13,6 @@ from modules.mixers.flex_qmix import FlexQMixer
 from utils.rl_utils import build_td_lambda_targets, build_q_lambda_targets
 from utils.th_utils import get_parameters_num
 
-
 def calculate_target_q(target_mac, batch, n_agents, enable_parallel_computing=False, thread_num=4):
     if enable_parallel_computing:
         th.set_num_threads(thread_num)
@@ -80,8 +79,7 @@ class NQLearner:
         self.target_mixer = copy.deepcopy(self.mixer)
         self.params += list(self.mixer.parameters())
 
-        print('Mixer Size: ')
-        print(get_parameters_num(self.mixer.parameters()))
+        print('Mixer Size: ', get_parameters_num(self.mixer.parameters()))
         
         if self.args.optimizer == 'adam':
             self.optimiser = Adam(params=self.params, lr=args.lr, weight_decay=getattr(args, "weight_decay", 0))
@@ -101,8 +99,6 @@ class NQLearner:
             from multiprocessing import Pool
             # Multiprocessing pool for parallel computing.
             self.pool = Pool(1)
-
-
 
     def train(self, batch: EpisodeBatch, t_env: int, episode_num: int):
 
@@ -210,6 +206,7 @@ class NQLearner:
             self.logger.log_stat("td_error_abs", td_error_abs, t_env)
             self.logger.log_stat("q_taken_mean", q_taken_mean, t_env)
             self.logger.log_stat("target_mean", target_mean, t_env)
+            self.logger.log_stat("Training_avg_time", self.avg_time, t_env)
             self.log_stats_t = t_env
         th.cuda.empty_cache()
         
