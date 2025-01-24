@@ -36,6 +36,20 @@ class Hypernetwork(nn.Module):
             h = self.n_head,
         )
         
+        self.weight_embedding = nn.Sequential(
+            nn.Linear(self.hypernet_embed, self.hypernet_embed),
+            nn.ReLU(),
+            nn.Linear(self.hypernet_embed, self.hypernet_embed),
+            nn.ReLU(),
+        )
+        
+        self.bias_embedding = nn.Sequential(
+            nn.Linear(self.hypernet_embed, self.hypernet_embed),
+            nn.ReLU(),
+            nn.Linear(self.hypernet_embed, self.hypernet_embed),
+            nn.ReLU(),
+        )
+
         self.weight_generator = QueryKeyBlock(
             d = self.hypernet_embed, 
             h = self.n_head
@@ -71,8 +85,11 @@ class Hypernetwork(nn.Module):
         embed = th.cat((a_embed, e_embed), dim=1)
         x = self.cross_attention(a_embed, embed)
         
-        weight = self.weight_generator(x, x)
-        bias = self.bias_generator(x)
+        weight_embed = self.weight_embedding(x)
+        bias_embed = self.bias_embedding(x)
+        
+        weight = self.weight_generator(weight_embed, weight_embed)
+        bias = self.bias_generator(bias_embed)
         return weight, bias 
     
 class SSMixer(nn.Module):

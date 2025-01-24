@@ -18,7 +18,7 @@ class Logger:
         # Import here so it doesn't have to be installed if you don't use it
         #from tensorboard_logger import configure, log_value
         if "sc2_v2" in args.env:
-            project_subname = f"{args.env_args['map_name']}_{str(args.env_args['capability_config']['n_units'])}"
+            project_subname = f"{args.env_args['map_name']}_{str(args.env_args['capability_config']['n_units'])}_{str(args.env_args['capability_config']['n_enemies'])}"
         else:
             project_subname = args.env_args["map_name"]
             

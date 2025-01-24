@@ -303,7 +303,7 @@ def run_sequential(args, logger):
 
             if episode_sample.device != args.device:
                 episode_sample.to(args.device)
-            
+
             learner.train(episode_sample, runner.t_env, episode)
             del episode_sample
 
@@ -324,7 +324,7 @@ def run_sequential(args, logger):
                 runner.t_env - model_save_time >= args.save_model_interval or runner.t_env >= args.t_max):
             model_save_time = runner.t_env
             local_results_path = os.path.expanduser(args.local_results_path)
-            save_path = os.path.join(local_results_path, "models", f"{args.env_args['map_name']}_{args.env_args['capability_config']['n_units']}", str(runner.t_env))
+            save_path = os.path.join(local_results_path, "models", f"{args.env_args['map_name']}_{args.env_args['capability_config']['n_units']}_{args.env_args['capability_config']['n_enemies']}", str(runner.t_env))
             os.makedirs(save_path, exist_ok=True)
             logger.console_logger.info("Saving models to {}".format(save_path))
             

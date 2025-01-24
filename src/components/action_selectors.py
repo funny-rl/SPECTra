@@ -139,7 +139,7 @@ class EpsilonGreedyActionSelector():
         masked_q_values[avail_actions == 0] = float("-inf")  # should never be selected!
 
         # random_numbers = th.rand_like(agent_inputs[:, :, 0])  # TODO: 为啥GPU和CPU model inference结果不同
-        random_numbers = th.rand(size=agent_inputs[:, :, 0].size(), dtype=th.float16, device="cpu").to(
+        random_numbers = th.rand(size=agent_inputs[:, :, 0].size(), dtype=th.float32, device="cpu").to(
             agent_inputs.device) 
 
         pick_random = (random_numbers < self.epsilon).long()

@@ -130,7 +130,7 @@ class NQLearner:
             mac_out.append(agent_outs)
         mac_out = th.stack(mac_out, dim=1)  # Concat over time
         # TODO: double DQN action, COMMENT: do not need copy
-        mac_out[avail_actions == 0] = -65504 # float 16 / -9999999: float 32
+        mac_out[avail_actions == 0] = -9999999
         # Pick the Q-Values for the actions taken by each agent
         chosen_action_qvals = th.gather(mac_out[:, :-1], dim=3, index=actions).squeeze(3)  # Remove the last dim
 
