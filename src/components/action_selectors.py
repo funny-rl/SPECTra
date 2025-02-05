@@ -149,7 +149,6 @@ class EpsilonGreedyActionSelector():
             picked_actions = pick_random * random_actions + (1 - pick_random) * masked_q_values.max(dim=2)[1]
             if (avail_actions.gather(2, picked_actions.unsqueeze(-1)).squeeze(-1) == 1).all():
                 break
-
         return picked_actions
 
 

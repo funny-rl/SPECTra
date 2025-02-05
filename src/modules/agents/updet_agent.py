@@ -10,7 +10,9 @@ class UPDeT(nn.Module):
         super(UPDeT, self).__init__()
         self.args = args
         self.input_shape = input_shape  # (5, (6, 5), (4, 5)) for 5m vs 6m
+        
         self.n_agents = args.n_agents
+        self.check_model_attention_map = args.check_model_attention_map
 
         self.transformer = Transformer(input_shapes=input_shape, emb=args.transformer_embed_dim,
                                        heads=args.transformer_heads, depth=args.transformer_depth,
@@ -46,8 +48,11 @@ class UPDeT(nn.Module):
         # # concat enemy Q over all enemies
         # q_enemies = torch.stack(q_enemies_list, dim=1).squeeze()
         
-        q_enemies = self.q_basic(
-            outputs[:, 1: 1 + self.args.n_enemies, :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
+        if self.check_model_attention_map:
+            q_enemies = self.q_basic(outputs[:, :-1])
+        else:
+            q_enemies = self.q_basic(
+                outputs[:, 1 + self.n_agents: , :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
         q_enemies = q_enemies.mean(dim=-1, keepdim=False)  # The average of the Move Action Q
         # concat basic action Q with enemy attack Q
         q = torch.cat((q_basic_actions, q_enemies), 1)
@@ -55,7 +60,6 @@ class UPDeT(nn.Module):
         
 
         return q, h  # [bs * n_agents, 6 + n_enemies], this shape will be reshaped to  [bs, n_agents, 6 + n_enemies] in forward() of the BasicMAC
-
 
 class SelfAttention(nn.Module):
     def __init__(self, emb, heads=8, mask=False):
@@ -72,7 +76,6 @@ class SelfAttention(nn.Module):
         self.unifyheads = nn.Linear(heads * emb, emb)
 
     def forward(self, x, mask):
-
         b, t, e = x.size()
         h = self.heads
         keys = self.tokeys(x).view(b, t, h, e)
@@ -181,6 +184,7 @@ class Transformer(nn.Module):
         return x, tokens
 
 
+
 def mask_(matrices, maskval=0.0, mask_diagonal=True):
     b, h, w = matrices.size()
     indices = torch.triu_indices(h, w, offset=0 if mask_diagonal else 1)
@@ -206,3 +210,4 @@ if __name__ == '__main__':
     for _ in range(args.episode):
         q, hidden_state = agent.forward(tensor, hidden_state, args.ally_num, args.enemy_num)
         q_list.append(q)
+

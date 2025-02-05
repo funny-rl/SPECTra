@@ -1,7 +1,7 @@
 import torch as th
 import torch.nn as nn
 
-from modules.layer.ss_attention import CrossAttentionBlock, QueryKeyBlock
+from modules.layer.ss_attention import CrossAttentionBlock, QueryKeyBlock,  SetAttentionBlock
 
 class SS_RNNAgent(nn.Module):
     def __init__(self, input_shape, args):
@@ -69,7 +69,7 @@ class SS_RNNAgent(nn.Module):
         
         self.n_agents = ally_feats.shape[1] + 1
         
-        own_masks = ~th.all(own_feats == 0, dim=-1)
+        own_mask = ~th.all(own_feats == 0, dim=-1)
         ally_mask = ~th.all(ally_feats == 0, dim=-1)
         enemy_mask = ~th.all(enemy_feats == 0, dim=-1)
         
@@ -79,8 +79,8 @@ class SS_RNNAgent(nn.Module):
         if self.args.obs_last_action:
             last_action_indices = embedding_indices[-1].reshape(-1, 1, 1)
             own_feats = th.cat((own_feats, last_action_indices), dim=-1)
-
-        masks = th.cat((own_masks, ally_mask, enemy_mask), dim=-1).unsqueeze(1)
+        
+        masks = th.cat((own_mask, ally_mask, enemy_mask), dim=-1).unsqueeze(1)
         own_feats = self.own_embedding(own_feats)
         ally_feats = self.allies_embedding(ally_feats)
         enemy_feats = self.enemies_embedding(enemy_feats)
@@ -114,5 +114,7 @@ class SS_RNNAgent(nn.Module):
         q_interact = self.action_attention(action_query, action_key)
 
         return th.cat((q_normal, q_interact), dim=-1), hidden_state
+    
+
         
         

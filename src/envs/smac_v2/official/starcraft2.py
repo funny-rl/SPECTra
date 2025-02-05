@@ -238,7 +238,7 @@ class StarCraft2Env(MultiAgentEnv):
             self.obs_own_health = True
         self.n_obs_pathing = 8
         self.n_obs_height = 9
-
+        
         # Rewards args
         self.reward_sparse = reward_sparse
         self.reward_only_positive = reward_only_positive
@@ -724,15 +724,17 @@ class StarCraft2Env(MultiAgentEnv):
 
         self.reward = reward
 
-        return reward, terminated, info
+        return reward, terminated, info       
 
     def get_agent_action(self, a_id, action):
         """Construct the action for agent a_id."""
-        # avail_actions = self.get_avail_agent_actions(a_id)
-        # assert (
-        #     avail_actions[action] == 1
-        # ), "Agent {} cannot perform action {}".format(a_id, action)
+        avail_actions = self.get_avail_agent_actions(a_id)
+        assert (
+            avail_actions[action] == 1
+        ), "Agent {} cannot perform action {}".format(a_id, action)
+        
         unit = self.get_unit_by_id(a_id)
+            
         tag = unit.tag
         x = unit.pos.x
         y = unit.pos.y
@@ -827,15 +829,20 @@ class StarCraft2Env(MultiAgentEnv):
         else:
             # attack/heal units that are in range
             target_id = action - self.n_actions_no_attack
+
             if (
                 self.map_type in ["MMM", "terran_gen"]
                 and unit.unit_type == self.medivac_id
             ):
+                if self.use_extended_action_masking:
+                    assert target_id < self.n_agents,  "Agent {} cannot heal Target {target_id}".format(target_id)
+                    target_id = target_id - 1
+
                 target_unit = self.agents[target_id]
                 action_name = "heal"
             else:
                 if self.use_extended_action_masking:
-                    target_id -= self.n_agents
+                    target_id = target_id - self.n_agents
                 target_unit = self.enemies[target_id]
                 action_name = "attack"
 
@@ -2124,7 +2131,7 @@ class StarCraft2Env(MultiAgentEnv):
         return type_id
     
     
-    def get_extended_avail_agent_actions(self, agent_id):
+    def get_extended_avail_agent_actions(self, agent_id, action_type = False):
         """Returns the available actions for agent_id."""
         
         unit = self.get_unit_by_id(agent_id)
@@ -2154,7 +2161,6 @@ class StarCraft2Env(MultiAgentEnv):
             if self.map_type in ["MMM", "terran_gen"] and unit.unit_type == self.medivac_id:
                 # Medivacs cannot heal themselves or other flying units
                 target_items = [(0, unit)]
-                
                 for (t_id, t_unit) in self.agents.items():
                     if t_id < agent_id:
                         target_items.append((t_id + 1, t_unit))
@@ -2162,28 +2168,7 @@ class StarCraft2Env(MultiAgentEnv):
                         target_items.append((t_id, t_unit))
                 for t_id, t_unit in target_items:
                     if t_unit.health > 0 and t_unit.unit_type != self.medivac_id:
-                        if not self.action_mask:
-                            avail_actions[t_id + self.n_actions_no_attack] = 1
-                        else:
-                            dist = self.distance(
-                                unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
-                            )
-                            can_shoot = (
-                                dist <= shoot_range
-                                if not self.conic_fov
-                                else self.is_position_in_cone(
-                                    agent_id, t_unit.pos, range="shoot_range"
-                                )
-                            )
-                            if can_shoot:
-                                avail_actions[t_id + self.n_actions_no_attack] = 1
-                return avail_actions
-            else:
-                for t_id, t_unit in self.enemies.items():
-                    if t_unit.health > 0:
-                        if not self.action_mask:
-                            avail_actions[t_id + self.n_actions_no_attack + self.n_agents] = 1
-                        else:
+                        if action_type:
                             dist = self.distance(
                                 unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
                             )
@@ -2196,6 +2181,55 @@ class StarCraft2Env(MultiAgentEnv):
                             )
                             if can_shoot:
                                 avail_actions[t_id + self.n_actions_no_attack + self.n_agents] = 1
+                        else:
+                            if not self.action_mask:
+                                avail_actions[t_id + self.n_actions_no_attack] = 1
+                            else:
+                                dist = self.distance(
+                                    unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
+                                )
+                                can_shoot = (
+                                    dist <= shoot_range
+                                    if not self.conic_fov
+                                    else self.is_position_in_cone(
+                                        agent_id, t_unit.pos, range="shoot_range"
+                                    )
+                                )
+                                if can_shoot:
+                                    avail_actions[t_id + self.n_actions_no_attack] = 1
+                return avail_actions
+            else:
+                for t_id, t_unit in self.enemies.items():
+                    if t_unit.health > 0:
+                        if action_type:
+                            dist = self.distance(
+                                unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
+                            )
+                            can_shoot = (
+                                dist <= shoot_range
+                                if not self.conic_fov
+                                else self.is_position_in_cone(
+                                    agent_id, t_unit.pos, range="shoot_range"
+                                )
+                            )
+                            if can_shoot:
+                                avail_actions[t_id + self.n_actions_no_attack + self.n_agents] = 1
+                        else:
+                            if not self.action_mask:
+                                avail_actions[t_id + self.n_actions_no_attack + self.n_agents] = 1
+                            else:
+                                dist = self.distance(
+                                    unit.pos.x, unit.pos.y, t_unit.pos.x, t_unit.pos.y
+                                )
+                                can_shoot = (
+                                    dist <= shoot_range
+                                    if not self.conic_fov
+                                    else self.is_position_in_cone(
+                                        agent_id, t_unit.pos, range="shoot_range"
+                                    )
+                                )
+                                if can_shoot:
+                                    avail_actions[t_id + self.n_actions_no_attack + self.n_agents] = 1
                 return avail_actions
         else:
             # only no-op allowed
@@ -2287,6 +2321,10 @@ class StarCraft2Env(MultiAgentEnv):
 
     def get_true_avail_agent_actions(self, agent_id):
         """Returns the available actions for agent_id."""
+        
+        if self.use_extended_action_masking:
+            return self.get_extended_avail_agent_actions(agent_id, True)
+        
         unit = self.get_unit_by_id(agent_id)
         if unit.health > 0:
             # cannot choose no-op when alive

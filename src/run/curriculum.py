@@ -6,17 +6,24 @@ class Curriculum_Manager:
         self.t_max = self.args.t_max
         self.capability_config = self.args.env_args["capability_config"]
         
-        self.C_menu = self.args.curriculum_menu # ["5v5", "10v10", "20v20"]
+        self.C_menu = self.args.curriculum_menu  # ["5v5", "20v20"]
+        self.cl_distribution = self.args.cl_distribution  
+
+        assert len(self.C_menu) == len(self.cl_distribution), "Mismatch between curriculum menu and distribution."
 
         for item in self.C_menu:
             assert isinstance(item, str), f"Invalid type: {item} (Expected string)"
             assert 'v' in item, f"Invalid format: {item} (Missing 'v')"
             left, right = item.split('v', 1)
             assert left.isdigit() and right.isdigit(), f"Invalid format: {item} (Non-numeric values)"
-        print(f"All curriculum menu items are valid : {self.C_menu}")
+        print(f"All curriculum menu items are valid: {self.C_menu}")
 
         self.num_C = len(self.C_menu)
-        self.C_interval = [ int((self.t_max / self.num_C) * i) for i in range(1, self.num_C +1)]
+
+        # Normalize distribution to ensure it sums to t_max
+        cumulative_ratios = [sum(self.cl_distribution[:i+1]) for i in range(self.num_C)]
+        self.C_interval = [int(self.t_max * ratio) for ratio in cumulative_ratios]
+
         self.current_C_level = 0
     
     def init_train_args(self, args):

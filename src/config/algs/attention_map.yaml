@@ -1,14 +1,13 @@
 main_model:
-  # use epsilon greedy action selector
+  load_dir: "~/SS-Net/src/models/terran_10v10_ss_vdn"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
   epsilon_anneal_time: 100000 # 500000 for 6h_vs_8z
 
-  runner: "episode"
   batch_size_run: 8
   buffer_size: 5000
-  batch_size: 32
+  batch_size: 128
 
   # update the target network every {} episodes
   target_update_interval: 200
@@ -29,6 +28,7 @@ main_model:
   td_lambda: 0.6
   optimizer: 'adam'
   q_lambda: False
+  use_O2MA: True # Decide whether to use O2MA or self-attention for embeddings
 
   name: "ss_vdn"
 
@@ -37,12 +37,12 @@ main_model:
 
 sub_model:
   # use epsilon greedy action selector
+  load_dir: "~/SS-Net/src/models/terran_10v10_updet_vdn"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
   epsilon_anneal_time: 100000 # 500000 for 6h_vs_8z
 
-  runner: "episode"
   batch_size_run: 8
   buffer_size: 5000
   batch_size: 8
@@ -71,5 +71,6 @@ sub_model:
 
   name: "updet_vdn"
 
-
+test_nepisode: 1
+runner: "episode"
 name: attention_map

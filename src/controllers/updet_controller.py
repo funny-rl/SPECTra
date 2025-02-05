@@ -5,6 +5,7 @@ import torch.nn.functional as F
 
 
 class UPDETController(BasicMAC):
+    
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False, id = None):
         if id is not None:
             self.id = id
@@ -50,8 +51,8 @@ class UPDETController(BasicMAC):
         # We do zero paddings here to support all maps
         inputs = th.cat([
             self.zero_padding(own_context, token_dim),
+            self.zero_padding(ally_feats, token_dim),
             self.zero_padding(enemy_feats, token_dim),
-            self.zero_padding(ally_feats, token_dim)
         ], dim=1)
 
         return inputs

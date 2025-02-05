@@ -88,8 +88,8 @@ def split_args(args):
 def dual_evaluate_sequential(args, runner, sub_mac):
     for id in range(args.test_nepisode):
         runner.run(test_mode=True, sub_mac = sub_mac, id = id)
-    if args.save_replay:
-        runner.save_replay()
+        if args.save_replay:
+            runner.save_replay()
     runner.close_env()
 
 
@@ -110,7 +110,6 @@ def init_env(args, logger, init = False, eval_args = None, runner = None, learne
         _target_agent = learner.target_mac
         _mixer = learner.mixer.state_dict()
         _target_mixer = learner.target_mixer.state_dict()
-        _optimiser = learner.optimiser.state_dict()
     
     runner = r_REGISTRY[args.runner](args=args, logger=logger, eval_args=eval_args)
     
@@ -202,7 +201,6 @@ def init_env(args, logger, init = False, eval_args = None, runner = None, learne
         learner.target_mac.load_state(_target_agent)
         learner.mixer.load_state_dict(_mixer)
         learner.target_mixer.load_state_dict(_target_mixer)
-        learner.optimiser.load_state_dict(_optimiser)
         print(f"Curriculum Upgrade Complete!!!")
 
     if args.use_cuda:
@@ -253,8 +251,8 @@ def run_sequential(args, logger):
     else:
         args1, args2 = split_args(args)
         
-        args1, runner1, buffer,learner1  = init_env(args1, logger, init = True, eval_args = eval_args)
-        args2, runner2, buffer,learner2  = init_env(args2, logger, init = True, eval_args = eval_args)
+        args1, runner1, buffer, _  = init_env(args1, logger, init = True, eval_args = eval_args)
+        args2, runner2, buffer, _  = init_env(args2, logger, init = True, eval_args = eval_args)
         
         dual_evaluate_sequential(args1, runner1, sub_mac = runner2.mac)
         return 
@@ -324,7 +322,7 @@ def run_sequential(args, logger):
                 runner.t_env - model_save_time >= args.save_model_interval or runner.t_env >= args.t_max):
             model_save_time = runner.t_env
             local_results_path = os.path.expanduser(args.local_results_path)
-            save_path = os.path.join(local_results_path, "models", f"{args.env_args['map_name']}_{args.env_args['capability_config']['n_units']}_{args.env_args['capability_config']['n_enemies']}", str(runner.t_env))
+            save_path = os.path.join(local_results_path, "models", f"{args.env_args['map_name']}_{args.env_args['capability_config']['n_units']}_{args.env_args['capability_config']['n_enemies']}",args.name,str(runner.t_env))
             os.makedirs(save_path, exist_ok=True)
             logger.console_logger.info("Saving models to {}".format(save_path))
             
@@ -367,17 +365,9 @@ def args_sanity_check(config, _log):
         config["evaluate"] = True
         config["use_CL"] = False
         config["save_replay"] = True
-        config["local_results_path"] = "~/pymarl4/results/check_attention_map"
         config["runner"] = "episode"
         config["batch_size_run"] = 1 
-
-        print("Updating configuration parameters for checking attention map:")
-        print("- Setting 'evaluate' to True")
-        print("- Setting 'use_CL' to False")
-        print("- Setting 'save_replay' to True")
-        print("- Setting 'local_results_path' to '~/pymarl4/results/check_attention_map'")
-        print("- Setting 'runner' to 'episode'")
-        print("- Setting 'batch_size_run' to 1")
-
+        config["batch_size"] = 1
+        config["test_nepisode"] = 1
         
     return config

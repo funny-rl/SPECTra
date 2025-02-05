@@ -4,7 +4,7 @@ from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
 from utils.th_utils import get_parameters_num
 
-
+import torch.nn.functional as F
 # This multi-agent controller shares parameters between agents
 class BasicMAC:
     def __init__(self, scheme, groups, args):
@@ -32,6 +32,7 @@ class BasicMAC:
 
     def forward(self, ep_batch, t, test_mode=False):
         agent_inputs = self._build_inputs(ep_batch, t, test_mode)
+        self.agent_inputs = agent_inputs
         avail_actions = ep_batch["avail_actions"][:, t]
         agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
 
@@ -77,6 +78,7 @@ class BasicMAC:
         th.save(self.agent.state_dict(), "{}/agent.th".format(path))
 
     def load_models(self, path):
+        path = os.path.expanduser(path)
         self.agent.load_state_dict(th.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage))
 
     def _build_agents(self, input_shape):
@@ -113,12 +115,37 @@ class BasicMAC:
     
     def extract_attention_score(self):
         if self.args.name == "updet_vdn":
-            attention_scores = []
-            for tblock in self.agent.transformer.tblocks: 
-                attention_score = tblock.attention.attention_score
-                attention_scores.append(attention_score)
+            attention_scores = self.agent.transformer.tblocks[0].attention.attention_score
             
         if self.args.name == "ss_vdn":
             attention_scores = self.agent.entity_attention.mab.multihead.attention.attention_score
 
         return attention_scores
+    
+    def input_record(self):
+        if self.args.name == "ss_vdn":
+            _, own_feats, ally_feats, enemy_feats, _ = self.agent_inputs
+            max_id = max(own_feats.shape[-1], ally_feats.shape[-1], enemy_feats.shape[-1])
+            outputs = th.cat([
+                self.zero_padding(own_feats, max_id),
+                self.zero_padding(ally_feats, max_id),
+                self.zero_padding(enemy_feats, max_id),
+            ], dim=1)
+            
+        if self.args.name == "updet_vdn":
+            outputs = self.agent_inputs
+            
+        return outputs
+    
+    def zero_padding(self, features, token_dim):
+        """
+        :param features: [bs * n_agents, k, fea_dim]
+        :param token_dim: maximum of fea_dim
+        :return:
+        """
+        existing_dim = features.shape[-1]
+        if existing_dim < token_dim:
+            # padding to the right side of the last dimension of the feature.
+            return F.pad(features, pad=[0, token_dim - existing_dim], mode='constant', value=0)
+        else:
+            return features

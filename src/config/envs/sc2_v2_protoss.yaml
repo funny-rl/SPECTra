@@ -64,6 +64,7 @@ env_args:
   heuristic_ai: False
   heuristic_rest: False
   debug: False
+  action_mask: False
 
 test_greedy: True
 test_nepisode: 32

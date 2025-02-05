@@ -5,7 +5,7 @@ import torch.nn.functional as F
 from modules.layer.ss_attention import QueryKeyBlock, CrossAttentionBlock, PoolingQueryKeyBlock
 
 class Hypernetwork(nn.Module):
-    def __init__(self, args, input_shape, last_action = False):
+    def __init__(self, args, input_shape):
         self.args = args
         super(Hypernetwork, self).__init__()
         self.n_head = args.mixing_n_head
@@ -49,7 +49,7 @@ class Hypernetwork(nn.Module):
             nn.Linear(self.hypernet_embed, self.hypernet_embed),
             nn.ReLU(),
         )
-
+        
         self.weight_generator = QueryKeyBlock(
             d = self.hypernet_embed, 
             h = self.n_head
@@ -58,7 +58,7 @@ class Hypernetwork(nn.Module):
         self.bias_generator = PoolingQueryKeyBlock(
             d = self.hypernet_embed,
             k = 1,
-            h = self.n_head 
+            h = self.n_head
         )
 
     def forward(self, state): # state: [batch * t, state]  # torch.Size([10624, 5, 8]) torch.Size([10624, 5, 11]) torch.Size([10624, 1, 1])

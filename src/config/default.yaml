@@ -62,9 +62,11 @@ asn_hidden_size: 32 #
 use_CL: False # Use Curriculum Learning
 curriculum_menu: # IF u use CL, do not think about env_args.capability_config.n_units and enemies
   - "5v5"
-  - "10v10"
-  - "15v15"
   - "20v20"
+
+cl_distribution:
+  - 0.3
+  - 0.7
 
 
 # check model attention 
@@ -72,7 +74,5 @@ check_model_attention_map: False
 check_models:
   - "ss_vdn"
   - "updet_vdn"
-load_paths:
-  - 
 
 
