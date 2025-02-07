@@ -52,7 +52,7 @@ class UPDeT(nn.Module):
             q_enemies = self.q_basic(outputs[:, :-1])
         else:
             q_enemies = self.q_basic(
-                outputs[:, 1 + self.n_agents: , :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
+                outputs[:, self.n_agents: -1, :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
         q_enemies = q_enemies.mean(dim=-1, keepdim=False)  # The average of the Move Action Q
         # concat basic action Q with enemy attack Q
         q = torch.cat((q_basic_actions, q_enemies), 1)

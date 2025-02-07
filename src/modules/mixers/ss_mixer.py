@@ -144,7 +144,6 @@ class SSMixer(nn.Module):
 
     def pos_func(self, x):
         return th.abs(x)
-        
 
     def _get_input_shape(self, state_component):
         entity_type = [self.n_agents, self.n_enemies, self.n_agents, 1] # U have to change this when u change your state entity sequence
