@@ -79,7 +79,10 @@ class BasicMAC:
 
     def load_models(self, path):
         path = os.path.expanduser(path)
-        self.agent.load_state_dict(th.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage))
+        state_dict = th.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage)
+        model_dict = self.agent.state_dict()
+        filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_dict and model_dict[k].shape == v.shape}
+        self.agent.load_state_dict(filtered_state_dict, strict=False)
 
     def _build_agents(self, input_shape):
         self.agent = agent_REGISTRY[self.args.agent](input_shape, self.args)

@@ -206,32 +206,12 @@ def init_env(args, logger, init = False, eval_args = None, runner = None, learne
     if args.use_cuda:
         learner.cuda()
 
-    if args.checkpoint_path != "":
-        timesteps = []
-        timestep_to_load = 0
-        if not os.path.isdir(args.checkpoint_path):
-            logger.console_logger.info("Checkpoint directiory {} doesn't exist".format(args.checkpoint_path))
-            return
+    if args.transfer_learning and args.load_dir != "":
 
-        # Go through all files in args.checkpoint_path
-        for name in os.listdir(args.checkpoint_path):
-            full_name = os.path.join(args.checkpoint_path, name)
-            # Check if they are dirs the names of which are numbers
-            if os.path.isdir(full_name) and name.isdigit():
-                timesteps.append(int(name))
-
-        if args.load_step == 0:
-            # choose the max timestep
-            timestep_to_load = max(timesteps)
-        else:
-            # choose the timestep closest to load_step
-            timestep_to_load = min(timesteps, key=lambda x: abs(x - args.load_step))
-
-        model_path = os.path.join(args.checkpoint_path, str(timestep_to_load))
+        model_path = os.path.join(args.load_dir)
 
         logger.console_logger.info("Loading model from {}".format(model_path))
         learner.load_models(model_path)
-        runner.t_env = timestep_to_load
 
     return args, runner, buffer, learner
 

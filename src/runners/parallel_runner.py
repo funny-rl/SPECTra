@@ -153,6 +153,8 @@ class ParallelRunner:
         terminated = [False for _ in range(self.batch_size)]
         envs_not_terminated = [b_idx for b_idx, termed in enumerate(terminated) if not termed]
         final_env_infos = []  
+        
+        
 
         save_probs = getattr(self.args, "save_probs", False)
         while True:
