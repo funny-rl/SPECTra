@@ -12,7 +12,6 @@ class UPDeT(nn.Module):
         self.input_shape = input_shape  # (5, (6, 5), (4, 5)) for 5m vs 6m
         
         self.n_agents = args.n_agents
-        self.check_model_attention_map = args.check_model_attention_map
 
         self.transformer = Transformer(input_shapes=input_shape, emb=args.transformer_embed_dim,
                                        heads=args.transformer_heads, depth=args.transformer_depth,
@@ -47,12 +46,9 @@ class UPDeT(nn.Module):
         #     q_enemies_list.append(q_enemy_mean)
         # # concat enemy Q over all enemies
         # q_enemies = torch.stack(q_enemies_list, dim=1).squeeze()
-        
-        if self.check_model_attention_map:
-            q_enemies = self.q_basic(outputs[:, :-1])
-        else:
-            q_enemies = self.q_basic(
-                outputs[:, self.n_agents: -1, :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
+
+        q_enemies = self.q_basic(
+            outputs[:, self.n_agents: -1, :])  # [bs * n_agents, n_enemies, 32]->[bs * n_agents, n_enemies, 6]
         q_enemies = q_enemies.mean(dim=-1, keepdim=False)  # The average of the Move Action Q
         # concat basic action Q with enemy attack Q
         q = torch.cat((q_basic_actions, q_enemies), 1)

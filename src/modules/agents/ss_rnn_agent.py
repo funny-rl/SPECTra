@@ -7,7 +7,7 @@ class SS_RNNAgent(nn.Module):
     def __init__(self, input_shape, args):
         super(SS_RNNAgent, self).__init__()
         self.args = args
-        self.use_O2MA = self.args.use_O2MA
+        self.use_SAQA = self.args.use_SAQA
         self.n_actions = self.args.n_actions
         self.n_head = self.args.n_head
         self.hidden_size = self.args.hidden_size
@@ -30,13 +30,13 @@ class SS_RNNAgent(nn.Module):
         self.normal_actions_net = nn.Linear(self.hidden_size, self.output_normal_actions)
         
         # Decide whether to use SQCA or self-attention
-        if self.use_O2MA:
-            self.entity_attention = CrossAttentionBlock(
+        if self.use_SAQA:
+            self.single_agent_query_attention = CrossAttentionBlock(
                 d = self.hidden_size, 
                 h = self.n_head
             )
         else:
-            self.entity_attention = SetAttentionBlock(
+            self.multi_agent_query_attention = SetAttentionBlock(
                 d = self.hidden_size, 
                 h = self.n_head
             )
@@ -87,10 +87,10 @@ class SS_RNNAgent(nn.Module):
         
         embeddings = th.cat((own_feats, ally_feats, enemy_feats), dim=1) # (bs * n_agents, n_entities, hidden_size)
         
-        if self.use_O2MA:
-            action_query = self.entity_attention(embeddings[:, 0].unsqueeze(1), embeddings, masks) # (bs * n_agents, 1, hidden_size)
+        if self.use_SAQA:
+            action_query = self.single_agent_query_attention(embeddings[:, 0].unsqueeze(1), embeddings, None) # (bs * n_agents, 1, hidden_size)
         else:
-            action_query = self.entity_attention(embeddings, masks.repeat(1, self.n_entities, 1))
+            action_query = self.multi_agent_query_attention(embeddings, masks.repeat(1, self.n_entities, 1))
             action_query = action_query.mean(dim = 1, keepdim = True)
         
         

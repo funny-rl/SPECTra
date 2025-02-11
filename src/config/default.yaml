@@ -18,7 +18,7 @@ buffer_cpu_only: True # If true we won't keep all of the replay buffer in vram
 
 # --- Logging options ---
 use_wandb: False 
-username: "singfor7012"
+username: "user_name"
 group_name : "Test"
 save_model: True # Save the models to disk
 save_model_interval: 9000000 # Save models after this many timesteps

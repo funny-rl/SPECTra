@@ -1,5 +1,7 @@
 # --- VDN specific parameters ---
 
+# This is the default configuration for the SPECTra-VDN algorithm
+
 # use epsilon greedy action selector
 action_selector: "epsilon_greedy"
 epsilon_start: 1.0
@@ -30,7 +32,7 @@ lr: 0.001 # Learning rate for agents
 td_lambda: 0.6
 optimizer: 'adam'
 q_lambda: False
-use_O2MA: True # Decide whether to use O2MA or self-attention for embeddings
+use_SAQA: True # Decide whether to use single-agent query attention or self-attention for embeddings
 
 name: "ss_vdn"
 

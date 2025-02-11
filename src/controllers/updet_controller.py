@@ -44,8 +44,9 @@ class UPDETController(BasicMAC):
         token_dim = max([self.input_shape[0], self.input_shape[1][-1], self.input_shape[2][-1]])
 
         own_context = own_context.contiguous().view(bs * self.n_agents, 1, -1)
-        enemy_feats = enemy_feats.contiguous().view(bs * self.n_agents, self.args.n_enemies, -1)
         ally_feats = ally_feats.contiguous().view(bs * self.n_agents, (self.args.n_agents - 1), -1)
+        enemy_feats = enemy_feats.contiguous().view(bs * self.n_agents, self.args.n_enemies, -1)
+        
 
         # In the original repository, UPDeT only supports marine-based battle scenarios. e.g. 3m, 8m, 5m_vs_6m, whose feature_dim is the same
         # We do zero paddings here to support all maps

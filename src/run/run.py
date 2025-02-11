@@ -348,6 +348,5 @@ def args_sanity_check(config, _log):
         config["runner"] = "episode"
         config["batch_size_run"] = 1 
         config["batch_size"] = 1
-        config["test_nepisode"] = 1
         
     return config

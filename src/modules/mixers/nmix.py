@@ -8,6 +8,9 @@ from torch.nn import LayerNorm
 class Mixer(nn.Module):
     def __init__(self, args, abs=True):
         super(Mixer, self).__init__()
+        
+        if "ss" in self.args.name: 
+            self.args.hypernet_embed = 32
 
         self.args = args
         self.n_agents = args.n_agents

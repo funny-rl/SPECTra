@@ -1,6 +1,6 @@
 import copy
 import time
-
+import os 
 import torch as th
 from torch.optim import RMSprop, Adam
 
@@ -230,13 +230,17 @@ class NQLearner:
         th.save(self.optimiser.state_dict(), "{}/opt.th".format(path))
 
     def load_models(self, path):
+        path = os.path.expanduser(path)
+        
         self.mac.load_models(path)
         # Not quite right but I don't want to save target networks
         self.target_mac.load_models(path)
         if self.args.mixer != "vdn":
-            self.mixer.load_state_dict(th.load("{}/mixer.th".format(path), map_location=lambda storage, loc: storage), strict=False)
+            state_dict = th.load("{}/mixer.th".format(path), map_location=lambda storage, loc: storage)
+            model_dict = self.mixer.state_dict()
+            filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_dict and model_dict[k].shape == v.shape}
+            self.mixer.load_state_dict(filtered_state_dict, strict=False)
             
-
     def __del__(self):
         if self.enable_parallel_computing:
             self.pool.close()

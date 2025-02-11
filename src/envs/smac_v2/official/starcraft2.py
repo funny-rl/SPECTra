@@ -2263,7 +2263,6 @@ class StarCraft2Env(MultiAgentEnv):
                 avail_actions[6 : 6 + self.n_fov_actions] = [
                     1
                 ] * self.n_fov_actions
-
             # Can attack only alive units that are alive in the shooting range
             shoot_range = self.unit_shoot_range(agent_id)
 

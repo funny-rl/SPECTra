@@ -1,5 +1,5 @@
 main_model:
-  load_dir: "~/SS-Net/src/models/terran_10v10_ss_vdn"
+  load_dir: "../../models/protoss_5v5/not_mask_ss_vdn"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
@@ -28,7 +28,8 @@ main_model:
   td_lambda: 0.6
   optimizer: 'adam'
   q_lambda: False
-  use_O2MA: True # Decide whether to use O2MA or self-attention for embeddings
+  
+  use_SAQA: True # Decide whether to use single-agent query attention or self-attention for embeddings
 
   name: "ss_vdn"
 
@@ -37,7 +38,7 @@ main_model:
 
 sub_model:
   # use epsilon greedy action selector
-  load_dir: "~/SS-Net/src/models/terran_10v10_updet_vdn"
+  load_dir: "../../models/protoss_5v5/updet_vdn"
   action_selector: "epsilon_greedy"
   epsilon_start: 1.0
   epsilon_finish: 0.05
@@ -70,7 +71,6 @@ sub_model:
   q_lambda: False
 
   name: "updet_vdn"
-
-test_nepisode: 1
+  
 runner: "episode"
 name: attention_map

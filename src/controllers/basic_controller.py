@@ -1,4 +1,3 @@
-import os
 from modules.agents import REGISTRY as agent_REGISTRY
 from components.action_selectors import REGISTRY as action_REGISTRY
 import torch as th
@@ -78,7 +77,6 @@ class BasicMAC:
         th.save(self.agent.state_dict(), "{}/agent.th".format(path))
 
     def load_models(self, path):
-        path = os.path.expanduser(path)
         state_dict = th.load("{}/agent.th".format(path), map_location=lambda storage, loc: storage)
         model_dict = self.agent.state_dict()
         filtered_state_dict = {k: v for k, v in state_dict.items() if k in model_dict and model_dict[k].shape == v.shape}
@@ -119,13 +117,13 @@ class BasicMAC:
     def extract_attention_score(self):
         if self.args.name == "updet_vdn":
             attention_scores = self.agent.transformer.tblocks[0].attention.attention_score
+            return attention_scores
             
-        if self.args.name == "ss_vdn":
-            attention_scores = self.agent.entity_attention.mab.multihead.attention.attention_score
-
-        return attention_scores
+        elif self.args.name == "ss_vdn":
+            attention_scores = self.agent.single_agent_query_attention.mab.multihead.attention.attention_score
+            return attention_scores
     
-    def input_record(self):
+    def get_agent_obs(self):
         if self.args.name == "ss_vdn":
             _, own_feats, ally_feats, enemy_feats, _ = self.agent_inputs
             max_id = max(own_feats.shape[-1], ally_feats.shape[-1], enemy_feats.shape[-1])
@@ -134,7 +132,7 @@ class BasicMAC:
                 self.zero_padding(ally_feats, max_id),
                 self.zero_padding(enemy_feats, max_id),
             ], dim=1)
-            
+
         if self.args.name == "updet_vdn":
             outputs = self.agent_inputs
             
