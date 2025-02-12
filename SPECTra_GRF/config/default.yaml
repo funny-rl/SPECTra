@@ -30,7 +30,7 @@ burn_in_period: 32
 
 # --- Logging options ---
 use_wandb: False # Log results to wandb
-username: "singfor7012"
+username: "username"
 group_name: "Test"
 save_model: True # Save the models to disk
 save_model_interval: 500000 # Save models after this many timesteps
