@@ -1,3 +1,3 @@
-from .academy_3_vs_1_with_keeper import Academy_3_vs_1_with_Keeper
-from .academy_run_pass_and_shoot_with_keeper import Academy_Run_Pass_and_Shoot_with_Keeper
-from .academy_pass_and_shoot_with_keeper import Academy_Pass_and_Shoot_with_Keeper
+from .academy_3_vs_1_with_keeper import Academy_3_vs_1_with_keeper
+from .pass_and_shoot_with_keeper import Pass_and_shoot_with_keeper
+from .run_pass_and_shoot_with_keeper import Run_pass_and_shoot_with_keeper

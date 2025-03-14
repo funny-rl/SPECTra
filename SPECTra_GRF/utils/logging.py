@@ -13,10 +13,6 @@ class Logger:
         self.stats = defaultdict(lambda: [])
 
     def setup_wandb(self, log_dir, args):
-
-
-        project_subname = args.env_args["env_name"]
-            
         self.wandb_logger = wandb.init(
             config=args,
             project= args.env,

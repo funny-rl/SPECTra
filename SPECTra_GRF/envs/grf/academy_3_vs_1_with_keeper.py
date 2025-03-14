@@ -1,139 +1,107 @@
 from .. import MultiAgentEnv
-import gfootball.env as football_env
-from gfootball.env import observation_preprocessing
+
 import gym
 import numpy as np
+import gfootball.env as football_env
 
+from gym.spaces import Box
+from gfootball.env import observation_preprocessing
 
-from .utils import _get_avail, Rewarder
+from .utils import FeatureModel, RewardModel
 
-class Academy_3_vs_1_with_Keeper(MultiAgentEnv):
-
+class Academy_3_vs_1_with_keeper(MultiAgentEnv):
     def __init__(
         self,
         dense_reward=False,
         write_full_episode_dumps=False,
         write_goal_dumps=False,
-        dump_freq=1000,
+        dump_freq=3000,
         render=False,
-        n_agents=3,
-        n_enemies=2,
-        time_limit=150,
+        n_agents = 3,
+        n_enemies = 2,
+        episode_limit=400,
         time_step=0,
-        obs_dim=26,
         env_name='academy_3_vs_1_with_keeper',
         stacked=False,
-        representation="simple115",
+        representation="raw",
         rewards='scoring',
-        logdir='football_dumps',
-        write_video=True,
+        logdir="../results/replays",
+        write_video=False,
         number_of_right_players_agent_controls=0,
-        seed=0
+        seed=0,
+        batch_size_run= 8,
     ):
-        self.dense_reward = dense_reward
-        self.write_full_episode_dumps = write_full_episode_dumps
-        self.write_goal_dumps = write_goal_dumps
-        self.dump_freq = dump_freq
-        self.render = render
-        self.n_agents = n_agents
         self.n_enemies = n_enemies
-        self.episode_limit = time_limit
+        self.dense_reward = dense_reward
+        self.n_agents = n_agents
+        self.n_allies = n_agents # because of goal keeper
+        self.episode_limit = episode_limit
         self.time_step = time_step
-        self.obs_dim = obs_dim
-        self.env_name = env_name
-        self.stacked = stacked
-        self.representation = representation
-        self.rewards = rewards
-        self.logdir = logdir
         self.write_video = write_video
-        self.number_of_right_players_agent_controls = number_of_right_players_agent_controls
         self.seed = seed
         
-        self.reward_encoder = Rewarder(self.n_agents)
-
         self.env = football_env.create_environment(
-            write_full_episode_dumps = self.write_full_episode_dumps,
-            write_goal_dumps = self.write_goal_dumps,
-            env_name=self.env_name,
-            stacked=self.stacked,
-            representation=self.representation,
-            rewards=self.rewards,
-            logdir=self.logdir,
-            render=self.render,
-            write_video=self.write_video,
-            dump_frequency=self.dump_freq,
+            write_full_episode_dumps=write_full_episode_dumps,
+            write_goal_dumps = write_goal_dumps,
+            env_name = env_name,
+            stacked = stacked,
+            representation = representation,
+            rewards = rewards,
+            logdir = logdir,
+            render = render,
+            write_video = write_video,
+            dump_frequency = dump_freq,
             number_of_left_players_agent_controls=self.n_agents,
-            number_of_right_players_agent_controls=self.number_of_right_players_agent_controls,
+            number_of_right_players_agent_controls = number_of_right_players_agent_controls,
             channel_dimensions=(observation_preprocessing.SMM_WIDTH, observation_preprocessing.SMM_HEIGHT))
-
-        obs_space_low = self.env.observation_space.low[0][:self.obs_dim]
-        obs_space_high = self.env.observation_space.high[0][:self.obs_dim]
-
-        self.action_space = [gym.spaces.Discrete(
-            self.env.action_space.nvec[1]) for _ in range(self.n_agents)]
-        self.observation_space = [
-            gym.spaces.Box(low=obs_space_low, high=obs_space_high, dtype=self.env.observation_space.dtype) for _ in range(self.n_agents)
-        ]
-
-        self.n_actions = self.action_space[0].n
-
-        self.unit_dim = self.obs_dim  # QPLEX unit_dim  for cds_gfootball
-        # self.unit_dim = 6  # QPLEX unit_dim set as that in Starcraft II
-
-
-    def get_simple_obs(self, index=-1):
         
-        simple_obs = []
-        if index == -1:
-            full_obs = self.env.unwrapped.observation()[0]
-            for idx, agents in enumerate(full_obs['left_team'][-self.n_agents:]):
-                simple_obs.append(agents.reshape(-1))
-                simple_obs.append(
-                    full_obs['left_team_direction'][-self.n_agents:][idx].reshape(-1))
-            for idx, enemies in enumerate(full_obs['right_team']):
-                simple_obs.append(enemies.reshape(-1))
-                simple_obs.append(full_obs['right_team_direction'][idx].reshape(-1))
-            simple_obs.append(full_obs['ball'])
-            simple_obs.append(full_obs['ball_direction'])
+        self.obs_own_feature_dims = 21
+        self.obs_ball_feature_dims = 18
+        self.obs_ally_feature_dim = 16
+        self.obs_enemy_feature_dim = 16
 
-            simple_obs = np.concatenate(simple_obs)
-            return simple_obs
+        self.state_agent_feature_dim = 18
+        self.state_enemy_feature_dim = 17
+        self.state_ball_feature_dims = 15
+        
+        self.feature_encoder = FeatureModel(
+            n_agents = self.n_agents, 
+            n_enemies = self.n_enemies,
+            obs_ally_feature_dim = self.obs_ally_feature_dim,
+            obs_enemy_feature_dim = self.obs_enemy_feature_dim,
+            state_agent_feature_dim = self.state_agent_feature_dim,
+            state_enemy_feature_dim = self.state_enemy_feature_dim,
+        )
+        self.reward_model = RewardModel(
+            episode_limit = self.episode_limit, 
+            batch_size_run = batch_size_run
+        )
+        
+        # init action space
+        self.action_space = [gym.spaces.Discrete(self.env.action_space.nvec[1]) for _ in range(self.n_agents)]
+        
+        # init observation & state
+        init_observations = self.env.reset() # List of observation dictionaries.
+        
+        tmp_obs = [self._encode_obs(init_observation)[0] for init_observation in init_observations]
+        _ervation_space = [Box(low=float("-inf"), high=float("inf"), shape=tmp_obs[n].shape, dtype=np.float32)
+                                  for n in range(self.n_agents)]
+        self.share_observation_space = _ervation_space.copy()
+        self.obs_dim = len(tmp_obs[0])
+        self.state_dim = self._encode_state(init_observations[0]).shape[-1]
+        
+        self.n_actions = self.action_space[0].n
+        self.pre_obs = None
 
-        else:
-            full_obs = self.env.unwrapped.observation()[index]
-            # local state, relative position
-            ego_position = full_obs['left_team'][-self.n_agents +
-                                                 index].reshape(-1)
-            simple_obs.append(ego_position)
-            simple_obs.append(
-                full_obs['left_team_direction'][-self.n_agents + index].reshape(-1))
-
-            
-            for idx, xy_coor in enumerate(np.delete(full_obs['left_team'][-self.n_agents:], index, axis=0)):
-                simple_obs.append((xy_coor- ego_position).reshape(-1))
-                simple_obs.append(np.delete(full_obs['left_team_direction'][-self.n_agents:], index, axis=0)[idx].reshape(-1))
-                
-            # simple_obs.append((np.delete(
-            #     full_obs['left_team'][-self.n_agents:], index, axis=0) - ego_position).reshape(-1))
-            # simple_obs.append(np.delete( 
-            #     full_obs['left_team_direction'][-self.n_agents:], index, axis=0).reshape(-1))
-
-            for idx, xy_coor in enumerate(full_obs['right_team']):
-                simple_obs.append((xy_coor- ego_position).reshape(-1))
-                simple_obs.append(full_obs['right_team_direction'][idx].reshape(-1))
-                
-            # simple_obs.append(
-            #     (full_obs['right_team'] - ego_position).reshape(-1))
-            # simple_obs.append(full_obs['right_team_direction'].reshape(-1))
-            simple_obs.append(full_obs['ball'][:2] - ego_position)
-            simple_obs.append(full_obs['ball'][-1].reshape(-1))
-            simple_obs.append(full_obs['ball_direction'])
-
-            simple_obs = np.concatenate(simple_obs)
-            return simple_obs, full_obs
-
-    def get_global_state(self):
-        return self.get_simple_obs(-1)
+    def _encode_obs(self, raw_obs):
+        obs, ava = self.feature_encoder.encode(raw_obs.copy())
+        obs_cat = np.hstack(
+            [np.array(obs[k], dtype=np.float32).flatten() for k in obs]
+        )
+        return obs_cat, ava
+    
+    def _encode_state(self, raw_obs):
+        return self.feature_encoder.encode_state(raw_obs.copy())
 
     def check_if_done(self):
         cur_obs = self.env.unwrapped.observation()[0]
@@ -145,67 +113,44 @@ class Academy_3_vs_1_with_Keeper(MultiAgentEnv):
 
         return False
 
-    def step(self, actions):
+    def step(self, actions, batch_idx):
         """Returns reward, terminated, info."""
         self.time_step += 1
-        self._obs, original_rewards, done, infos = self.env.step(actions.tolist())
+        o, _, done, infos  = self.env.step(actions.tolist())
         
-        rewards = self.reward_encoder.calc_reward(original_rewards[0], self.pre_obs[0], self._obs[0])
-        
-        # obs = np.array([self.get_obs(i) for i in range(self.n_agents)])
-        
-        if done:
-            lose = True
-
         if self.time_step >= self.episode_limit:
             done = True
-            lose = True
-
         if self.check_if_done():
             done = True
-            lose = True
-            
-        if sum(original_rewards) > 0.0:
-            lose = False
+        
+        obs = []
+        ava = []
+        for obs_dict in o:
+            obs_i, ava_i = self._encode_obs(obs_dict)
+            obs.append(obs_i)
+            ava.append(ava_i)
+        
+        self._obs = np.array(obs)
+        self._state = self._encode_state(obs_dict)  # Because it is absolute coordinates, it does not matter if information from a specific agent is used.
+        self.ava = np.array(ava)
+        
+        own_changing_r, oob_r, pass_r, player_pos_r, yellow_r, ball_position_r, score_r = self.reward_model.calc_reward(
+            self.pre_obs[0], 
+            o[0], 
+            done, 
+            actions, 
+            batch_idx,
+            self.time_step
+        )
+        
+        rewards = (own_changing_r, oob_r, pass_r, player_pos_r, yellow_r, ball_position_r, score_r)
 
-        self.pre_obs = self._obs
-
-        if done:
-            if lose:
-                # return obs, self.get_global_state(), -int(done), done, infos
-                return rewards - 1, done, infos
-            else:
-                return rewards + 100, done, infos
-
-        else:
-            return rewards, done, infos
+        self.pre_obs = o
+        return rewards, done, infos
 
     def get_obs(self):
         """Returns all agent observations in a list."""
-        return self.get_obs_agent()
-
-    def avail_action_mask(self, full_obses):
-        self.avail_actions = []
-        for full_obs in full_obses:
-            player_idx = full_obs["active"]
-            player_pos_x, player_pos_y = full_obs["left_team"][player_idx]
-            ball_x, ball_y, _ = full_obs["ball"]
-            ball_x_relative = ball_x - player_pos_x
-            ball_y_relative = ball_y - player_pos_y
-            ball_distance = np.linalg.norm([ball_x_relative, ball_y_relative])
-            self.avail_actions.append(_get_avail(full_obs, ball_distance))
-            
-
-    def get_obs_agent(self):
-        """Returns observation for agent_id."""
-        obs = []
-        self.full_obs = []
-        for i in range(self.n_agents):
-            simple_obs, full_obs = self.get_simple_obs(i)
-            obs.append(simple_obs)
-            self.full_obs.append(full_obs)
-        self.avail_action_mask(full_obses = self.full_obs)
-        return obs
+        return self._obs
 
     def get_obs_size(self):
         """Returns the size of the observation."""
@@ -213,29 +158,43 @@ class Academy_3_vs_1_with_Keeper(MultiAgentEnv):
 
     def get_state(self):
         """Returns the global state."""
-        return self.get_global_state()
+        return self._state
 
     def get_state_size(self):
         """Returns the size of the global state."""
         # TODO: in wrapper_grf_3vs1.py, author set state_shape=obs_shape
-        return self.obs_dim
+        return self.state_dim
+    
+    def get_obs_component(self):
+        return [self.obs_own_feature_dims, self.obs_ball_feature_dims, self.obs_ally_feature_dim, self.obs_enemy_feature_dim]
+    
+    def get_state_component(self):
+        return [self.state_agent_feature_dim, self.state_enemy_feature_dim, self.state_ball_feature_dims]
 
     def get_avail_actions(self):
         """Returns the available actions of all agents in a list."""
-        return self.avail_actions
+        return self.ava
     
     def get_total_actions(self):
         """Returns the total number of actions an agent could ever take."""
         return self.action_space[0].n
-
-    def reset(self):
-        """Returns initial observations and states."""
-        self.time_step = 0
-        self.pre_obs = self.env.reset()
-        
-        self._obs = self.pre_obs
     
-        return np.array(self.get_obs_agent()), self.get_global_state()
+    def reset(self):
+        """ Returns initial observations and states"""
+        self.time_step = 0
+        obs_dicts = self.env.reset()
+        self.pre_obs = obs_dicts
+        obs = []
+        ava = []
+        for obs_dict in obs_dicts:
+            obs_i, ava_i = self._encode_obs(obs_dict)
+            obs.append(obs_i)
+            ava.append(ava_i)
+            
+        self._obs = np.array(obs)
+        self._state = self._encode_state(obs_dicts[0])
+        self.ava = np.array(ava)
+        return self._obs, self._state
     
     def render(self):
         pass

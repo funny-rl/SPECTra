@@ -11,7 +11,9 @@ import torch as th
 from utils.logging import get_logger
 import yaml
 
-from run import run
+from run.run import run
+
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
 
 # set to "no" if you want to see stdout/stderr in console
 SETTINGS['CAPTURE_MODE'] = "fd"
@@ -54,6 +56,7 @@ def _get_config(params, arg_name, subfolder):
 
 def recursive_dict_update(d, u):
     for k, v in u.items():
+        print(k, v)
         if isinstance(v, Mapping):
             d[k] = recursive_dict_update(d.get(k, {}), v)
         else:
@@ -84,10 +87,19 @@ if __name__ == '__main__':
     # Load algorithm and env base configs
     env_config = _get_config(params, "--env-config", "envs")
     alg_config = _get_config(params, "--config", "algs")
+    
+    if env_config == None:
+        params.append("--env-config=_11_vs_11_hard_stochastic")
+        env_config = _get_config(params, "--env-config", "envs")
+        print("We set '--env-config' to '_11_vs_11_hard_stochastic'")
+    if alg_config == None:
+        params.append("--config=spectra_qmix_plus")
+        alg_config = _get_config(params, "--config", "algs")
+        print("We set '--config' to 'spectra_qmix_plus'")
+        
     # config_dict = {**config_dict, **env_config, **alg_config}
-    config_dict = recursive_dict_update(config_dict, env_config)
     config_dict = recursive_dict_update(config_dict, alg_config)
-
+    config_dict = recursive_dict_update(config_dict, env_config)
     # now add all the config to sacred
     ex.add_config(config_dict)
 

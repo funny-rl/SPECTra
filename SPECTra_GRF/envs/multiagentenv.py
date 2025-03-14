@@ -13,10 +13,6 @@ class MultiAgentEnv(object):
         """Returns all agent observations in a list."""
         raise NotImplementedError
 
-    def get_obs_agent(self, agent_id):
-        """Returns observation for agent_id."""
-        raise NotImplementedError
-
     def get_obs_size(self):
         """Returns the size of the observation."""
         raise NotImplementedError
@@ -67,7 +63,10 @@ class MultiAgentEnv(object):
                     "obs_shape": self.get_obs_size(),
                     "n_actions": self.get_total_actions(),
                     "n_agents": self.n_agents,
+                    "n_allies" : self.n_allies,
                     "n_enemies": self.n_enemies,
                     "episode_limit": self.episode_limit,
-                    "unit_dim": self.unit_dim}
+                    "obs_component": self.get_obs_component(),
+                    "state_component": self.get_state_component(),
+                    }
         return env_info

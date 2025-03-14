@@ -1,0 +1,29 @@
+env: run_pass_and_shoot_with_keeper # google research football
+
+env_args:
+  dense_reward: False
+  write_full_episode_dumps: False
+  write_goal_dumps: False
+  dump_freq: 500
+  render: False
+  n_agents: 2
+  n_enemies: 2
+  episode_limit: 400
+  time_step: 0
+  env_name: "run_pass_and_shoot_with_keeper"
+  stacked: False
+  representation: "raw"
+  rewards: "scoring"
+  logdir: "../results/replays"
+  write_video: False
+  number_of_right_players_agent_controls: 0
+  seed: 0
+
+batch_size: 32
+test_greedy: True
+test_nepisode: 32
+test_interval: 10000
+log_interval: 2000
+runner_log_interval: 2000
+learner_log_interval: 2000
+t_max: 10050000

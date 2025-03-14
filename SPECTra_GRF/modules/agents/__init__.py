@@ -1,10 +1,5 @@
-from .rnn_agent import RNNAgent
-from .hpns_rnn_agent import HPNS_RNNAgent
-from .ss_rnn_agent import SS_RNNAgent  
+from .spectra_rnn_agent import SPECTra_RNNAgent  
 
 REGISTRY = {}
 
-
-REGISTRY["rnn"] = RNNAgent
-REGISTRY["hpns_rnn"] = HPNS_RNNAgent
-REGISTRY["ss_rnn"] = SS_RNNAgent
+REGISTRY["spectra_rnn"] = SPECTra_RNNAgent

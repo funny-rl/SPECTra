@@ -224,7 +224,6 @@ class ReplayBuffer(EpisodeBatch):
         self.buffer_size = buffer_size  # same as self.batch_size but more explicit
         self.buffer_index = 0
         self.episodes_in_buffer = 0
-        self.is_from_start = True
         self.burn_in_period = burn_in_period
 
     def insert_episode_batch(self, ep_batch):
@@ -341,7 +340,6 @@ class ReplayBuffer_Prior(EpisodeBatch):
         self.buffer_size = buffer_size  # same as self.batch_size but more explicit
         self.buffer_index = 0
         self.episodes_in_buffer = 0
-        self.is_from_start = True
         self.burn_in_period = burn_in_period
         self.proportional = Experience(buffer_size, alpha=alpha)
 

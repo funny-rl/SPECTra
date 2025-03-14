@@ -5,9 +5,9 @@ import torch as th
 from torch.optim import RMSprop, Adam
 
 from components.episode_buffer import EpisodeBatch
-from modules.mixers.nmix import Mixer
 from modules.mixers.vdn import VDNMixer
-from modules.mixers.ss_mixer import SSMixer
+from modules.mixers.spectra_mixer import SPECTraMixer
+from modules.mixers.nmix import Mixer
 from utils.rl_utils import build_td_lambda_targets, build_q_lambda_targets
 from utils.th_utils import get_parameters_num
 
@@ -29,7 +29,6 @@ def calculate_target_q(target_mac, batch, n_agents, enable_parallel_computing=Fa
         target_mac_out = th.stack(target_mac_out, dim=1)  # Concat across time
         return target_mac_out
 
-
 def calculate_n_step_td_target(args, target_mixer, target_max_qvals, batch, rewards, terminated, mask, gamma, td_lambda,
                                enable_parallel_computing=False, thread_num=4, q_lambda=False, target_mac_out=None):
     if enable_parallel_computing:
@@ -39,16 +38,14 @@ def calculate_n_step_td_target(args, target_mixer, target_max_qvals, batch, rewa
         # Set target mixing net to testing mode
         target_mixer.eval()
         # Calculate n-step Q-Learning targets
-        
-        target_max_qvals = target_mixer(target_max_qvals, batch["state"])
-
+        target_max_qvals = target_mixer(target_max_qvals, batch["state"]) 
         if q_lambda:
             raise NotImplementedError
             qvals = th.gather(target_mac_out, 3, batch["actions"]).squeeze(3)
             qvals = target_mixer(qvals, batch["state"])
             targets = build_q_lambda_targets(rewards, terminated, mask, target_max_qvals, qvals, gamma, td_lambda)
         else:
-            targets = build_td_lambda_targets(rewards, terminated, mask, target_max_qvals, gamma, td_lambda)
+            targets = build_td_lambda_targets(args, rewards, terminated, mask, target_max_qvals, gamma, td_lambda)
         return targets.detach()
 
 
@@ -62,19 +59,14 @@ class NQLearner:
         self.device = th.device('cuda' if args.use_cuda else 'cpu')
         self.params = list(mac.parameters())
 
-        if args.mixer == "qatten":
-            self.mixer = QattenMixer(args)
-        elif args.mixer == "vdn":
+        if args.mixer == "vdn":
             self.mixer = VDNMixer()
+        elif args.mixer == "spectra_mixer":
+            self.mixer = SPECTraMixer(args)
         elif args.mixer == "qmix":  # 31.521K
             self.mixer = Mixer(args)
-        elif args.mixer == "ss_mixer":
-            self.mixer = SSMixer(args)
-        elif args.mixer == "flex_mixer":
-            self.mixer = FlexQMixer(args)
         else:
             raise "mixer error"
-
         self.target_mixer = copy.deepcopy(self.mixer)
         self.params += list(self.mixer.parameters())
 
@@ -168,12 +160,12 @@ class NQLearner:
         # Set mixing net to training mode
         self.mixer.train()
         # Mixer
-        chosen_action_qvals = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
+        joint_qval = self.mixer(chosen_action_qvals, batch["state"][:, :-1])
 
         if self.args.mixer.find("qmix") != -1 and self.enable_parallel_computing:
             targets = targets.get()
 
-        td_error = (chosen_action_qvals - targets)
+        td_error = (joint_qval - targets)
         td_error2 = 0.5 * td_error.pow(2)
 
         mask = mask.expand_as(td_error2)
@@ -201,7 +193,7 @@ class NQLearner:
             with th.no_grad():
                 mask_elems = mask_elems.item()
                 td_error_abs = masked_td_error.abs().sum().item() / mask_elems
-                q_taken_mean = (chosen_action_qvals * mask).sum().item() / (mask_elems * self.args.n_agents)
+                q_taken_mean = (joint_qval * mask).sum().item() / (mask_elems * self.args.n_agents)
                 target_mean = (targets * mask).sum().item() / (mask_elems * self.args.n_agents)
             self.logger.log_stat("loss_td", loss.item(), t_env)
             self.logger.log_stat("grad_norm", grad_norm, t_env)

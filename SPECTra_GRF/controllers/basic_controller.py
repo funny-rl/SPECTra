@@ -17,7 +17,6 @@ class BasicMAC:
 
         self.action_selector = action_REGISTRY[args.action_selector](args)
         self.save_probs = getattr(self.args, 'save_probs', False)
-
         self.hidden_states = None
 
     def select_actions(self, ep_batch, t_ep, t_env, bs=slice(None), test_mode=False):
@@ -50,7 +49,14 @@ class BasicMAC:
         self.hidden_states = self.agent.init_hidden()
         if self.hidden_states is not None:
             self.hidden_states = self.hidden_states.unsqueeze(0).expand(batch_size, n_agents, -1)  # bav
-
+            
+    def supervised_select_actions(self, batch, test_mode=False):
+        batch = batch.reshape(int(batch.shape[0] / self.n_agents), self.n_agents, -1)
+        batch_size = batch.shape[0]
+        agent_inputs = self.supervised_build_inputs(batch, test_mode)
+        agent_outs, self.hidden_states = self.agent(agent_inputs, self.hidden_states)
+        return agent_outs.view(batch_size, self.n_agents, -1)
+    
     def set_train_mode(self):
         self.agent.train()
 
